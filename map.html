@@ -561,7 +561,7 @@
             html += `
 <label class="difficulty-btn" id="scug-${slugcatName}">
     <input type="radio" class="rw-ui" name="difficulties" onclick="selectDifficulty('${slugcatName}');" value="${slugcatName}"${slugcatName == difficulty ? ' checked' : ''} autocomplete="off">
-    <img src="./resources/slugcats/${slugcatName}.png">
+    <img src="./resources/slugcats/${slugcatName.toLowerCase()}.png">
 </label>`;
             document.getElementById('scug-selector').innerHTML = html;
         }
