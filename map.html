@@ -25,6 +25,7 @@
             height: 100%;
             padding: 0;
             margin: 0;
+            overflow-x: hidden;
         }
 
         #mapid {
@@ -59,6 +60,9 @@
         .lineage-entry {
             height: 24px;
         }
+        .lineage-entry.tall {
+            height: 30px;
+        }
 
         .roomtag-divs {
             display: flex;
@@ -80,7 +84,7 @@
             margin-left: 0px;
             margin-top: -5px;
             font-weight: 900;
-            font-size: 140%;
+            font-size: 125%;
             color: white;
             -webkit-text-fill-color: white;
             /* Will override color (regardless of order) */
@@ -93,7 +97,7 @@
             margin-left: 0px;
             margin-top: 0px;
             font-weight: 900;
-            font-size: 150%;
+            font-size: 125%;
             color: white;
             -webkit-text-fill-color: white;
             /* Will override color (regardless of order) */
@@ -102,6 +106,12 @@
         }
 
         .object-image {
+            position: absolute;
+            margin-left: -25px;
+            margin-top: -25px;
+        }
+
+        .rse-image {
             position: absolute;
             margin-left: -25px;
             margin-top: -25px;
@@ -134,6 +144,40 @@
             margin-top: 0px;
         }
 
+        .warppoint-image {
+            position: absolute;
+            transform: translate(-50%, -50%) scale(0.5);
+            border: 4px solid white;
+            border-radius: 50%;
+        }
+
+        .warpdest-circle {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background-color: #5b4fde;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+        .warpdest-circle.badwarp {
+            background-color: #5f1cd4;
+        }
+
+        .warpdest-label {
+            position: absolute;
+            margin-left: 0px;
+            /* margin-top: -5px; */
+            font-weight: 900;
+            font-size: 112.5%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+            pointer-events: none;
+        }
+
         .icon-image {
             position: absolute;
             margin-left: -25px;
@@ -153,10 +197,10 @@
 
         .icon-tooltip {
             position: absolute;
-            margin-left: -8px;
-            margin-top: -22px;
+            margin-left: 0px;
+            margin-top: -16px;
             font-weight: 900;
-            font-size: 150%;
+            font-size: 125%;
             color: white;
             -webkit-text-fill-color: white;
             /* Will override color (regardless of order) */
@@ -166,7 +210,7 @@
 
         .overlay-label {
             position: relative;
-            width: 150px;
+            width: 160px;
             height: 36px;
             margin-top: 11px;
             margin-bottom: 11px;
@@ -219,11 +263,35 @@
 
         .region-btn {
             font-size: 0.8rem;
-            width: 230px;
+            width: 240px;
             height: 24px;
             position: relative;
+        }
+        .region-btn:not(details > .region-btn) {
             margin-top: 8px;
             margin-bottom: 8px;
+        }
+
+        details.rw-ui {
+            border-radius: 8px;
+            border: 2px solid #686672;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        details.rw-ui > summary {
+            background: #686672;
+            color: black;
+            padding: 4px 8px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            user-select: none;
+        }
+        .region-sublist {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px;
         }
 
         a {
@@ -260,6 +328,15 @@
             background-image: url(./resources/hamburger.png);
             background-repeat: no-repeat;
             background-position: center;
+        }
+
+        @media screen and (max-width: 640px) {
+            .overlay-label {
+                height: 28px;
+            }
+            input[type="checkbox"].rw-ui + span {
+                top: calc(50% - 10px);
+            }
         }
 
         @media (max-width: 899px) {
@@ -304,16 +381,24 @@
         .spawn-filter {
             display: initial
         }
-    </style>
 
-    <style id="objectfilters">
         .object-filter {
             display: initial
         }
-    </style>
 
-    <style id="roomtagfilters">
         .roomtag-filter {
+            display: initial
+        }
+
+        .warppoint-filter {
+            display: initial
+        }
+
+        .warpdest-filter {
+            display: initial
+        }
+
+        .rse-filter {
             display: initial
         }
     </style>
@@ -418,6 +503,11 @@
                     window.history.pushState(null, '', window.location.pathname + '?' + newstr);
                 } else if (!noNavigation) document.location.search = newstr;
                 if (!noNavigation) newState();
+
+                const regionButtons = [... document.querySelectorAll("input[name='regions']")];
+                for (const btn of regionButtons) {
+                    btn.checked = (btn.value == region);
+                }
             }
 
             if (region != region_param) {
@@ -459,7 +549,7 @@
             html += `
 <label>
     <div class="region-btn">
-        <input type="radio" class="rw-ui" name="regions" onclick="selectRegion(this.value);" value="${r}"${r == region ? ' checked' : ''} autocomplete = "off">
+        <input type="radio" class="rw-ui" name="regions" onclick="selectRegion(this.value);" value="${r}"${r == params.get("region") ? ' checked' : ''} autocomplete = "off">
         <span>${regions[r]["name"].toUpperCase()} (${r})</span>
     </div>
 </label>`
@@ -615,7 +705,7 @@
             crs: L.CRS.Simple,
             zoomControl: false,
         });
-        map.attributionControl.setPrefix('Powered by <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a>, <a href="https://github.com/henpemaz" title="Gamedev &amp; associated arts enthusiast">Henpemaz</a>, &amp; <a href="https://github.com/alduris" title="Programmer and fox enjoyer">Alduris</a> | Join the <a href="https://discord.gg/kPGJNhrnu2">Rain World Modding Server</a>')
+        map.attributionControl.setPrefix('Powered by <a href="https://leafletjs.com" target="_blank" title="A JS library for interactive maps">Leaflet</a>, <a href="https://github.com/henpemaz" target="_blank" title="Gamedev &amp; associated arts enthusiast">Henpemaz</a>, &amp; <a href="https://github.com/alduris" target="_blank" title="Fox enthusiast and sometimes a programmer">Alduris</a> | Join the <a href="https://discord.gg/kPGJNhrnu2" target="_blank">Rain World Modding Server</a>')
         map.setView([0, 0], -5);
 
         // Events
@@ -656,8 +746,13 @@
         var densLayer;
         var placedObjectsLayer;
         var roomTagsLayer;
+        var warpPointsLayer;
+        var warpDestsLayer;
+        var rippleEggsLayer;
+        var vistaPointsLayer;
         var loadedDifficulty = null;
         var loadedRegion = null;
+        var rottedRegions = ["wora", "wsur", "whir", "wgwr", "wdsr"];
         function loadRegion(pdifficulty, pregion) {
             if (loadedDifficulty == pdifficulty && loadedRegion == pregion) {
                 // Region isn't changing, double-check focused room
@@ -691,15 +786,14 @@
             } catch (e) {
                 console.error(e);
             }
-            let rdifficulty = pdifficulty;
-            if (["white", "yellow", "red", "night", "artificer", "rivulet", "spear", "gourmand", "saint", "inv"].indexOf(rdifficulty.toLowerCase()) == -1) rdifficulty = "modcats/" + rdifficulty;
-            let roompath = `https://alduris.github.io/modmap-data-${rdifficulty}/${region}`;
+            var region_url = region.toUpperCase();
+            var roompath = `./slugcats/${region_url}/${pdifficulty}`;
             getJsonObject(`${roompath}/region.json`, function (json) {
                 var roomjson = json;
                 if ('copyingrooms' in json) {
-                    getJsonObject(`${roompath}/${region}/region.json`, function (copyjson) {
+                    getJsonObject(`${roompath}/${region_url}/region.json`, function (copyjson) {
                         roomjson = copyjson;
-                        roompath = `${roompath}/${region}`;
+                        roompath = `${roompath}/${region_url}`;
                     }, false);
                 }
 
@@ -804,33 +898,102 @@
                                 // lineages are vertical stacks
                                 divhtml += '<div class="spawn-entry ' + spawn_filter + '">';
                                 for (let i = 0; i < spawn.lineage.length; i++) {
-                                    var tooltip = "";
-                                    if ((spawn.spawnData?.indexOf("Night") ?? -1) > -1) {
-                                        tooltip += "🌙";
-                                    }
-                                    if ((spawn.spawnData?.indexOf("PreCycle") ?? -1) > -1) {
-                                        tooltip += "🚿";
+                                    let tooltip = "";
+                                    let rottype = 0;
+                                    if (spawn.lineage_data != null && spawn.lineage_data[i] != null && spawn.lineage_data[i].length > 2) {
+                                        let spawndata = spawn.lineage_data[i].substring(1, spawn.lineage_data[i].length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
+
+                                        if (spawndata.indexOf("Night") > -1) {
+                                            tooltip += "🌙";
+                                            spawndata.splice(spawndata.indexOf("Night"), 1);
+                                        }
+                                        if (spawndata.indexOf("PreCycle") > -1) {
+                                            tooltip += "🚿";
+                                            spawndata.splice(spawndata.indexOf("PreCycle"), 1);
+                                        }
+                                        if (spawndata.indexOf("Winter") > -1) {
+                                            tooltip += "❄️";
+                                            spawndata.splice(spawndata.indexOf("Winter"), 1);
+                                        }
+                                        if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
+                                            let rotflag = spawndata.find(x => x.startsWith("RotType"));
+                                            switch (rotflag) {
+                                                case "RotType:1":
+                                                case "RotType:2":
+                                                    rottype = 1;
+                                                    break;
+                                                case "RotType:3":
+                                                    rottype = 2;
+                                                    break;
+                                            }
+                                            // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
+                                        }
+                                        if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
+                                            spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")));
+                                        }
+                                        if (tooltip.length > 0) tooltip += ", ";
+                                        tooltip += spawndata.join(", ");
                                     }
 
-                                    var path = "./resources/creatures/" + spawn.lineage[i].toLowerCase() + ".png";
+                                    let icon = spawn.lineage[i].toLowerCase();
+                                    if (rottype > 0) icon = icon + "_" + rottype;
+                                    let path = "./resources/icons/" + icon + ".png";
                                     if (spawn.lineage[i] == "") path = "./resources/none.png";
-                                    divhtml += `<div class="lineage-entry">
+                                    divhtml += `<div class="lineage-entry${rottype > 0 ? " tall" : ""}">
                                         <img class="icon-image" src="${path}"/>
-                                        <div class="icon-label">${Math.trunc(Number.parseFloat(spawn.lineage_probs[i]) * 100)}</div>
+                                        <div class="icon-label">${Math.trunc(Number.parseFloat(spawn.lineage_probs[i]) * 100)}%</div>
                                         <div class="icon-tooltip">${tooltip}</div>
                                         </div>`;
                                 }
                                 divhtml += '</div>';
                             } else {
-                                var tooltip = "";
-                                if (spawn.night) {
-                                    tooltip += "🌙";
+                                let tooltip = "";
+                                let rottype = 0;
+                                let altform = false;
+                                if (spawn.spawn_data != null && spawn.spawn_data.length > 2) {
+                                    let spawndata = spawn.spawn_data.substring(1, spawn.spawn_data.length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
+
+                                    if (spawndata.indexOf("Night") > -1) {
+                                        tooltip += "🌙";
+                                        spawndata.splice(spawndata.indexOf("Night"), 1);
+                                    }
+                                    if (spawndata.indexOf("PreCycle") > -1) {
+                                        tooltip += "🚿";
+                                        spawndata.splice(spawndata.indexOf("PreCycle"), 1);
+                                    }
+                                    if (spawndata.indexOf("Winter") > -1) {
+                                        tooltip += "❄️";
+                                        spawndata.splice(spawndata.indexOf("Winter"), 1);
+                                    }
+                                    if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
+                                        let rotflag = spawndata.find(x => x.startsWith("RotType"));
+                                        switch (rotflag) {
+                                            case "RotType:1":
+                                            case "RotType:2":
+                                                rottype = 1;
+                                                break;
+                                            case "RotType:3":
+                                                rottype = 2;
+                                                break;
+                                        }
+                                        // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
+                                    }
+                                    if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
+                                        spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")), 1);
+                                    }
+                                    if (spawndata.indexOf("AlternateForm") > -1) {
+                                        altform = true;
+                                        spawndata.splice(spawndata.indexOf("AlternateForm"), 1);
+                                    }
+                                    if (tooltip.length > 0) tooltip += ", ";
+                                    tooltip += spawndata.join(", ");
                                 }
-                                if (spawn.pre_cycle) {
-                                    tooltip += "🚿";
-                                }
+                                let icon = spawn.creature.toLowerCase();
+                                if (altform && icon == "skywhale") icon = "altskywhale";
+                                if (rottype > 0) icon = icon + "_" + rottype;
+                                let path = "./resources/icons/" + icon + ".png";
                                 divhtml += `<div class="spawn-entry${spawn_filter}">
-                                    <img class="icon-image" src="./resources/creatures/${spawn.creature.toLowerCase()}.png"/>
+                                    <img class="icon-image" src="${path}"/>
                                     <div class="icon-label">x${spawn.amount}</div>
                                     <div class="icon-tooltip">${tooltip}</div>
                                     </div>`;
@@ -864,12 +1027,13 @@
                         let rules = poRules[object];
                         rules ??= poRules[object.toLowerCase()];
                         if (rules != undefined && "use" in rules) {
-                            console.log("Using " + rules["use"] + " for object " + object);
-                            object = rules[use];
+                            object = rules["use"];
+							rules = poRules[object];
+							rules ??= poRules[object.toLowerCase()];
                         }
 
                         // Data!
-                        let icon = "./resources/objects/" + object.toLowerCase() + ".png";
+                        let icon = "./resources/icons/" + object.toLowerCase() + ".png";
                         let tooltip = "";
                         let display = true;
 
@@ -917,8 +1081,168 @@
                         });
                     },
                 });
-                //if (hadPlacedObjects) placedObjectsLayer.addTo(map);
-                //overlays.addOverlay(placedObjectsLayer, "Placed Objects");
+                if (hadPlacedObjects) placedObjectsLayer.addTo(map);
+                overlays.addOverlay(placedObjectsLayer, "Placed Objects");
+
+                // Warp points
+                let hadWarpPoints = map.hasLayer(warpPointsLayer) || loadedRegion == null;
+                if (warpPointsLayer) {
+                    overlays.removeLayer(warpPointsLayer);
+                    map.removeLayer(warpPointsLayer);
+                }
+                warpPointsLayer = L.geoJSON(json["warppoint_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let taghtml = "";
+                        let warpData = feature.properties;
+
+                        let icon = "wrsa";
+                        if (region.toLowerCase() == "wora") icon = "unknown";
+                        else if (rottedRegions.indexOf(region.toLowerCase()) > -1) icon = "wora";
+                        else if (region.toLowerCase() == "wara") icon = "waua";
+                        if (warpData.destRegion != null) icon = warpData.destRegion.toLowerCase();
+
+                        let regionName = regions[icon.toUpperCase()];
+                        if (regionName != undefined) regionName = regionName["name"];
+                        else regionName = "Random warp";
+
+                        if (region.toLowerCase() != "waua") {
+                            taghtml += "<div class=\"warppoint-filter\">";
+                            taghtml += `<img class="warppoint-image" src="./resources/warp/${icon}.png" title="${regionName}"/>`;
+                            taghtml += "</div>";
+                        }
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'warppoint-divs',
+                                html: taghtml,
+                            }),
+                            interactive: true,
+                        });
+                    },
+                    onEachFeature: function (feature, layer) {
+                        // Region changing stuff
+                        let warpData = feature.properties;
+                        layer.on({
+                            click: function (e) {
+                                if (warpData.destRegion != null) {
+                                    region = warpData.destRegion.toUpperCase();
+                                    room = warpData.destRoom?.toUpperCase();
+                                    pushState();
+                                } else if (region.toLowerCase() == "wara") {
+                                    region = "WAUA";
+                                    room = null;
+                                    pushState();
+                                } else if (rottedRegions.indexOf(region.toLowerCase()) > -1) {
+                                    region = "WORA";
+                                    room = null;
+                                    pushState();
+                                } else {
+                                    region = "WRSA";
+                                    room = null;
+                                    pushState();
+                                }
+                            }
+                        });
+                    }
+                });
+                if (hadWarpPoints) warpPointsLayer.addTo(map);
+                overlays.addOverlay(warpPointsLayer, "Warp Points");
+
+                // Warp destinations
+                let hadWarpDestinations = map.hasLayer(warpDestsLayer) || loadedRegion == null;
+                if (warpDestsLayer) {
+                    overlays.removeLayer(warpDestsLayer);
+                    map.removeLayer(warpDestsLayer);
+                }
+                warpDestsLayer = L.geoJSON(json["warpdest_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let taghtml = "";
+                        let data = feature.properties;
+                        let title = "Warp Destination";
+                        let classes = "warpdest-circle";
+
+                        let badWarp = data.badWarp;
+                        let deadEnd = data.deadEnd;
+
+                        if (badWarp) {
+                            title += "\nBad warp";
+                            classes += " badwarp";
+                        }
+                        if (deadEnd) {
+                            title += "\nDead end";
+                        }
+                        if (data.rippleReq > 1) {
+                            title += `\nRipple requirement: ${data.rippleReq}`;
+                        }
+
+                        taghtml += "<div class=\"warpdest-filter\">";
+                        taghtml += `<div class="${classes}" title="${title}"></div>`;
+                        // taghtml += `<img class="warpdest-image" src="./resources/icons/.png"/>`;
+                        if (data.rippleReq > 1) taghtml += `<div class="warpdest-label">\u2265${data.rippleReq}</div>`;
+                        taghtml += "</div>";
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'warpdest-divs',
+                                html: taghtml,
+                            }),
+                        });
+                    }
+                });
+                if (hadWarpDestinations) warpDestsLayer.addTo(map);
+                overlays.addOverlay(warpDestsLayer, "Warp Destinations");
+
+                // Ripple spawn eggs
+                /*let hadRippleEggs = map.hasLayer(rippleEggsLayer) || loadedRegion == null;
+                if (rippleEggsLayer != null) {
+                    overlays.removeLayer(rippleEggsLayer);
+                    map.removeLayer(rippleEggsLayer);
+                }
+                rippleEggsLayer = L.geoJSON(json["ripplespawnegg_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let objecthtml = "";
+                        let object = feature.properties.object;
+                        let data = feature.properties.settings;
+
+                        // Data!
+                        let icon = "./resources/icons/ripplespawnegg.png";
+
+                        // The resulting HTML
+                        objecthtml += `<div class="rse-entry">
+                                    <img class="rse-image" src="${icon}"/>
+                                    </div>`;
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'rse-divs',
+                                html: objecthtml,
+                            }),
+                            interactive: false,
+                        });
+                    }
+                });
+                if (hadRippleEggs) rippleEggsLayer.addTo(map);
+                overlays.addOverlay(rippleEggsLayer, "Ripple Spawn Eggs");*/
+
+                // Vista points
+                let hadVistaPoints = map.hasLayer(vistaPointsLayer) || loadedRegion == null;
+                if (vistaPointsLayer != null) {
+                    overlays.removeLayer(vistaPointsLayer);
+                    map.removeLayer(vistaPointsLayer);
+                }
+                vistaPointsLayer = L.geoJSON(json["vista_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: "vista-divs",
+                                html: `<div class="vista-entry"><img class="object-image" src="./resources/Vista_icon.png"/></div>`
+                            }),
+                            interactive: false
+                        });
+                    }
+                });
+                if (hadVistaPoints) vistaPointsLayer.addTo(map);
+                overlays.addOverlay(vistaPointsLayer, "Vistas");
 
                 // Room Tags
                 let hadRoomTags = map.hasLayer(roomTagsLayer) || loadedRegion == null;
@@ -983,8 +1307,8 @@
                         });
                     },
                 });
-                //if (hadRoomTags) roomTagsLayer.addTo(map);
-                //overlays.addOverlay(roomTagsLayer, "Room Tags");
+                if (hadRoomTags) roomTagsLayer.addTo(map);
+                overlays.addOverlay(roomTagsLayer, "Room Tags");
 
                 // Zoom to room on rooms loaded
                 let foundRoom = false;
@@ -1013,9 +1337,16 @@
 
                 // Don't enable certain layers when loaded for the first time
                 if (loadedCount == 1) {
-                    map.removeLayer(placedObjectsLayer);
                     map.removeLayer(roomTagsLayer);
-                };
+                    map.removeLayer(rippleEggsLayer);
+                    setCollapsibleWidths();
+
+                    // Also check the radio button
+                    const regionButtons = [... document.querySelectorAll("input[name='regions']")];
+                    for (const btn of regionButtons) {
+                        btn.checked = (btn.value == region);
+                    }
+                }
                 loadedCount++;
             }, true);
 
@@ -1451,11 +1782,10 @@
             }
         }
 
-        // Collapsible things
+        // Collapseable things
         var uncollapsed = null;
         var collapsible = document.querySelectorAll(".collapsible");
         for (const el of collapsible) {
-            el.style.setProperty("--hide-pos", "-" + (el.getBoundingClientRect().width) + "px");
             var button = el.querySelector(".collapse-tab");
             button.addEventListener("click", (e) => {
                 if (uncollapsed != null) {
@@ -1468,6 +1798,11 @@
                     el.classList.remove("collapsed");
                 }
             });
+        }
+        function setCollapsibleWidths() {
+            for (const el of collapsible) {
+                el.style.setProperty("--hide-pos", "-" + (el.getBoundingClientRect().width) + "px");
+            }
         }
 
     </script>
