@@ -88,13 +88,26 @@
             position: relative;
         }
 
+        .notice {
+            text-align: center;
+            border-radius: 8px;
+            color: white;
+            border: 2px solid white;
+            font-family: var(--font-body);
+            margin-block: 2em;
+        }
+        .notice h1 {
+            font-family: var(--font-title);
+            margin-top: 0em;
+        }
     </style>
 
 </head>
 
 <body>
     <form id="main-menu" action="map.html" method="get">
-        <div class="rw-title">Rain World</div>
+        <div class="rw-title">Rain World Mod Map</div>
+        <div class="notice"><h1>NOTICE</h1><p>We are under reconstruction right now! <a href="https://alduris.github.io/mod-map/">See the old map</a></p></div>
         <div class="rw-bigtext" style="text-align: center; margin-top:0.5em;">I'm lost in...</div>
         <div id="regionlist"></div>
 		<input type="hidden" name="slugcat" value="white" required />
